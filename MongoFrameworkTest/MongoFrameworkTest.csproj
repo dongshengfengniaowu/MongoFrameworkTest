@@ -11,7 +11,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MongoFramework" Version="0.11.0" />
+    <PackageReference Include="AutoMapper" Version="8.1.0" />
+    <PackageReference Include="MongoFramework" Version="0.11.1" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
   </ItemGroup>
 

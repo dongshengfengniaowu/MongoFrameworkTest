@@ -1,4 +1,5 @@
-﻿using MongoDB.Driver;
+﻿using AutoMapper;
+using MongoDB.Driver;
 using MongoFramework;
 using Newtonsoft.Json;
 using System;
@@ -18,14 +19,29 @@ namespace MongoFrameworkTest
             //using (var myContext = new DeviceMongoContext(connection))
             //{
             //    myContext.DeviceModels.AddRange(list);
-            //    await  myContext.SaveChangesAsync();
+            //    await myContext.SaveChangesAsync();
             //}
+            //using (var myContext = new DeviceMongoContext(connection))
+            //{
+            //    list=myContext.DeviceModels.Take(5).ToList();
+            //    myContext.DeviceModels.RemoveRange(list);
+            //    await myContext.SaveChangesAsync();
+            //}
+          
+            DeviceView deviceView = list.Where(x => x.DeviceId == "2957bba1a24d4460907bdc310c36936f,d385142191aa2372c7c35068b5cd5913").FirstOrDefault();
+            deviceView.Description = "mongoTest";
+            
             using (var myContext = new DeviceMongoContext(connection))
             {
-                list=myContext.DeviceModels.Take(5).ToList();
-                myContext.DeviceModels.RemoveRange(list);
-                await myContext.SaveChangesAsync();
+                //var config = new MapperConfiguration(cfg => cfg.CreateMap<DeviceView, DeviceView>());
+                Mapper.Initialize(cfg => cfg.CreateMap<DeviceView, DeviceView>());
+                DeviceView device = myContext.DeviceModels.Where(x => x.DeviceId == "2957bba1a24d4460907bdc310c36936f,d385142191aa2372c7c35068b5cd5913").FirstOrDefault();
+                device = Mapper.Map<DeviceView>(deviceView);
+                //myContext.DeviceModels.Update(device);
+                 await myContext.SaveChangesAsync();
+                device = myContext.DeviceModels.Where(x => x.DeviceId == "2957bba1a24d4460907bdc310c36936f,d385142191aa2372c7c35068b5cd5913").FirstOrDefault();
             }
+            
             Console.WriteLine("Hello World!");
         }
     }
