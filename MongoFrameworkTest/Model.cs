@@ -49,8 +49,8 @@ namespace MongoFrameworkTest
     {
         public DeviceMongoContext(IMongoDbConnection Connection) : base(Connection)
         {
-            EntityMapping.GetOrCreateDefinition(typeof(DeviceView)).CollectionName = "KC.Fengniaowu.Hebe.Devices";
-            EntityMapping.GetOrCreateDefinition(typeof(DeviceReadingModel)).CollectionName = "KC.Fengniaowu.Hebe.DeviceReadings";
+            EntityMapping.GetOrCreateDefinition(typeof(DeviceView)).CollectionName = "Test.Devices";
+            EntityMapping.GetOrCreateDefinition(typeof(DeviceReadingModel)).CollectionName = "Test.DeviceReadings";
         }
         public MongoDbSet<DeviceReadingModel> DeviceReadingModels { get; set; }
         public MongoDbSet<DeviceView> DeviceModels { get; set; }
@@ -228,7 +228,7 @@ namespace MongoFrameworkTest
 
 
         //[DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        //public long Id { get; set; }
+        public long Id { get; set; }
 
         [Key]
         public string ActorId { get; set; }
