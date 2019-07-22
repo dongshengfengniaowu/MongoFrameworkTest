@@ -11,9 +11,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AutoMapper" Version="8.1.0" />
-    <PackageReference Include="MongoFramework" Version="0.11.2" />
+    <PackageReference Include="AutoMapper" Version="8.1.1" />
+    <PackageReference Include="EqualityComparer" Version="0.1.2" />
+    <PackageReference Include="MongoFramework" Version="0.15.0" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MyModelBaseTest\MyModelBaseTest.csproj" />
   </ItemGroup>
 
 </Project>
