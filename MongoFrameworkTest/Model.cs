@@ -14,6 +14,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
+using Convert = MyModelBaseTest.Convert;
 
 namespace MongoFrameworkTest
 {
@@ -132,7 +133,7 @@ namespace MongoFrameworkTest
         [NotMapped]
         public Dictionary<string, string> Data { get; set; } = new Dictionary<string, string>();
     }
-    public class DeviceView : KolibreActorState
+    public class DeviceView : TrackableKolibreActorState
     {
         private long _SerialNumber;
         /// <summary>
@@ -435,24 +436,20 @@ namespace MongoFrameworkTest
             set => this.SetPropertyValue(() => this.Enabled, ref _Enabled, value);
         }
     }
-    public class KolibreActorState : IChangeTrackable
+    public class KolibreActorState 
     {
-        #region 私有成员字段
+        protected KolibreActorState()
+        {
+        }
 
-        private object _WriteLock = new object();
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        private ConcurrentDictionary<string, PropertyToken> _properties;
-        private ConcurrentDictionary<string, object> _changedProperties;
-
-        #endregion 私有成员字段
-
+        protected KolibreActorState(string actorId)
+        {
+            ActorId = actorId.ToString();
+        }
         public string GetData(string key)
         {
             return Data.ContainsKey(key) ? Data[key] : null;
         }
-
         public void SetData(string key, string value)
         {
             if (value == null)
@@ -462,37 +459,73 @@ namespace MongoFrameworkTest
 
             Data[key] = value;
         }
+        [Key]
+        public virtual string ActorId { get; set; }
 
-        #region 成员字段
 
-        private string _ActorId;
+        public virtual DateTimeOffset CreateTime { get; set; }
+
+
+        public virtual DateTimeOffset UpdateTime { get; set; }
+
+        [Column("Data")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public virtual string DataPayload
+        {
+            get
+            {
+                return Data.ToJsonString(JsonSettings.DataJsonSettings);
+            }
+            set
+            {
+                Data = new Dictionary<string, string>(value.FromJson<Dictionary<string, string>>(JsonSettings.DataJsonSettings), StringComparer.OrdinalIgnoreCase);
+            }
+        }
+        [JsonIgnore]
+        [NotMapped]
+        public virtual Dictionary<string, string> Data { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        [JsonIgnore]
+        [NotMapped]
+        public virtual IList<string> DataKeys => Data.Keys.ToList();
+    }
+    public abstract class TrackableKolibreActorState : KolibreActorState, IChangeTrackable
+    {
+        #region Private member field
+
+        private object _WriteLock = new object();
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        private ConcurrentDictionary<string, PropertyToken> _properties;
+        private ConcurrentDictionary<string, object> _changedProperties;
+
+        #endregion Private member field
+
+        #region Member field
 
         [Key]
-        public string ActorId
+        public override string ActorId
         {
-            get => this._ActorId;
-            set => this.SetPropertyValue(() => this.ActorId, ref _ActorId, value);
+            get => this.GetPropertyValue(() => this.ActorId);
+            set => this.SetPropertyValue(() => this.ActorId, value);
         }
 
-        private DateTimeOffset _CreateTime;
-
-        public DateTimeOffset CreateTime
+        public override DateTimeOffset CreateTime
         {
-            get => this._CreateTime;
-            set => this.SetPropertyValue(() => this.CreateTime, ref _CreateTime, value);
+            get => this.GetPropertyValue(() => this.CreateTime);
+            set => this.SetPropertyValue(() => this.CreateTime, value);
         }
 
-        private DateTimeOffset _UpdateTime;
-
-        public DateTimeOffset UpdateTime
+        public override DateTimeOffset UpdateTime
         {
-            get => this._UpdateTime;
-            set => this.SetPropertyValue(() => this.UpdateTime, ref _UpdateTime, value);
+            get => this.GetPropertyValue(() => this.UpdateTime);
+            set => this.SetPropertyValue(() => this.UpdateTime, value);
         }
 
         [Column("Data")]
         [EditorBrowsable(EditorBrowsableState.Never)]
-        public string DataPayload
+        public override string DataPayload
         {
             get
             {
@@ -507,26 +540,26 @@ namespace MongoFrameworkTest
 
         [JsonIgnore]
         [NotMapped]
-        public Dictionary<string, string> Data { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        public override Dictionary<string, string> Data { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         [JsonIgnore]
         [NotMapped]
-        public IList<string> DataKeys => Data.Keys.ToList();
+        public override IList<string> DataKeys => Data.Keys.ToList();
 
-        #endregion 成员字段
+        #endregion Member field
 
-        #region 构造函数
+        #region Constructor
 
-        protected KolibreActorState()
+        protected TrackableKolibreActorState()
         {
         }
 
-        protected KolibreActorState(string actorId)
+        protected TrackableKolibreActorState(string actorId)
         {
             ActorId = actorId.ToString();
         }
 
-        protected KolibreActorState(KolibreActorState model)
+        protected TrackableKolibreActorState(TrackableKolibreActorState model)
         {
             if (model == null)
                 return;
@@ -539,21 +572,25 @@ namespace MongoFrameworkTest
             }
         }
 
-        #endregion 构造函数
+        #endregion Constructor
 
-        #region 保护属性
+        #region Protection attribute
+
+        protected bool HasProperties()
+        {
+            return _properties != null && _properties.Count > 0;
+        }
 
         protected ConcurrentDictionary<string, PropertyToken> Properties()
         {
             if (_properties == null)
                 System.Threading.Interlocked.CompareExchange(ref _properties, new ConcurrentDictionary<string, PropertyToken>(), null);
-
             return _properties;
         }
 
-        #endregion 保护属性
+        #endregion Protection attribute
 
-        #region 保护方法
+        #region Protection method
 
         protected T GetPropertyValue<T>(string propertyName, T defaultValue = default(T))
         {
@@ -571,7 +608,6 @@ namespace MongoFrameworkTest
             if (property == null)
                 throw new InvalidOperationException(string.Format("The '{0}' property is not exists.", propertyName));
 
-            //返回属性的默认值
             return this.GetPropertyDefaultValue(property, defaultValue);
         }
 
@@ -604,8 +640,6 @@ namespace MongoFrameworkTest
 
             if (properties != null && properties.TryGetValue(property.Name, out token))
                 return (T)token.Value;
-
-            //返回属性的默认值
             return this.GetPropertyDefaultValue(property, defaultValue);
         }
 
@@ -634,10 +668,7 @@ namespace MongoFrameworkTest
             if (string.IsNullOrEmpty(propertyName))
                 throw new ArgumentNullException(nameof(propertyName));
 
-            //更新目标值
             target = value;
-
-            //激发“PropertyChanged”事件
             this.RaisePropertyChanged(propertyName, value);
         }
 
@@ -645,14 +676,10 @@ namespace MongoFrameworkTest
         {
             if (propertyExpression == null)
                 throw new ArgumentNullException(nameof(propertyExpression));
-
-            //获取属性表达式指定的属性信息
             var property = this.GetPropertyInfo(propertyExpression);
             if (IsSame(property.Name, value)) return;
-            //更新目标的值
             target = value;
 
-            //激发“PropertyChanged”事件
             this.RaisePropertyChanged(property.Name, value);
         }
 
@@ -688,7 +715,6 @@ namespace MongoFrameworkTest
 
                 onChanged?.Invoke((T)originalValue, (T)newValue);
 
-                //激发“PropertyChanged”事件，并将当前属性加入到更改集中
                 this.RaisePropertyChanged(propertyName, newValue);
             }
         }
@@ -697,11 +723,8 @@ namespace MongoFrameworkTest
         {
             if (propertyExpression == null)
                 throw new ArgumentNullException(nameof(propertyExpression));
-
-            //解析属性表达式
             var property = this.GetPropertyInfo(propertyExpression);
             if (IsSame(property.Name, value)) return;
-            //设置属性值
             if (onChanged == null)
                 this.SetPropertyValueCore(property, value);
             else
@@ -720,7 +743,6 @@ namespace MongoFrameworkTest
             properties.AddOrUpdate(property.Name,
                 key =>
                 {
-                    //获取属性的默认值，注意：不能使用反射获取属性值，因为属性的获取器中可能会调用该方法而导致死循环
                     originalValue = this.GetPropertyDefaultValue(property);
 
                     var propertyValue = this.OnPropertySet(property.Name, property.PropertyType, originalValue, value);
@@ -744,12 +766,11 @@ namespace MongoFrameworkTest
                 if (onChanged != null)
                     onChanged(originalValue, newValue);
 
-                //激发“PropertyChanged”事件，并将当前属性加入到更改集中
                 this.RaisePropertyChanged(property.Name, newValue);
             }
         }
 
-        #endregion 保护方法
+        #endregion Protection method
 
         #region 公共方法
 
@@ -919,7 +940,7 @@ namespace MongoFrameworkTest
             var attribute = property.GetCustomAttribute<DefaultValueAttribute>();
 
             if (attribute != null)
-                return MyModelBaseTest.Convert.ConvertValue(attribute.Value, property.PropertyType);
+                return Convert.ConvertValue(attribute.Value, property.PropertyType);
 
             return TypeExtension.GetDefaultValue(property.PropertyType);
         }
@@ -932,14 +953,13 @@ namespace MongoFrameworkTest
             var attribute = property.GetCustomAttribute<DefaultValueAttribute>();
 
             if (attribute != null)
-                return MyModelBaseTest.Convert.ConvertValue<T>(attribute.Value, defaultValue);
+                return Convert.ConvertValue<T>(attribute.Value, defaultValue);
 
             return defaultValue;
         }
 
         #endregion 私有方法
     }
-
     public struct PropertyToken
     {
         #region 成员字段
